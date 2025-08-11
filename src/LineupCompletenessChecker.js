@@ -108,6 +108,7 @@ function useSleeper(leagueId) {
   const [rosters, setRosters] = useState([]);
   const [matchups, setMatchups] = useState([]);
   const [players, setPlayers] = useState(null);
+  const [league, setLeague] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -123,17 +124,19 @@ function useSleeper(leagueId) {
         if (aborted) return;
         setState(nfl);
         const week = nfl.display_week || nfl.week || nfl.leg;
-        const [u, r, m, p] = await Promise.all([
+        const [u, r, m, p, l] = await Promise.all([
           fetch(`${API}/league/${leagueId}/users?_=${timestamp}`).then((r) => r.json()),
           fetch(`${API}/league/${leagueId}/rosters?_=${timestamp}`).then((r) => r.json()),
           fetch(`${API}/league/${leagueId}/matchups/${week}?_=${timestamp}`).then((r) => r.json()),
           fetch(`${API}/players/nfl?_=${timestamp}`).then((r) => r.json()), // large — cacheable
+          fetch(`${API}/league/${leagueId}?_=${timestamp}`).then((r) => r.json()), // get league info for roster_positions
         ]);
         if (aborted) return;
         setUsers(u);
         setRosters(r);
         setMatchups(Array.isArray(m) ? m : []);
         setPlayers(p);
+        setLeague(l);
       } catch (e) {
         console.error(e);
         setError(e?.message || "Failed to load data");
@@ -147,21 +150,21 @@ function useSleeper(leagueId) {
     };
   }, [leagueId]);
 
-  return { state, users, rosters, matchups, players, loading, error };
+  return { state, users, rosters, matchups, players, league, loading, error };
 }
 
-function TeamLineupModal({ team, onClose, matchup, players, byeTeamsThisWeek }) {
+function TeamLineupModal({ team, onClose, matchup, players, byeTeamsThisWeek, league }) {
   if (!team || !matchup) return null;
   
-  // Standard Sleeper lineup positions
-  const standardPositions = ["QB", "RB", "RB", "WR", "WR", "TE", "FLEX", "FLEX", "DEF", "K"];
+  // Use league's roster_positions if available, otherwise fall back to standard positions
+  const rosterPositions = league?.roster_positions || ["QB", "RB", "RB", "WR", "WR", "TE", "FLEX", "FLEX", "DEF", "K"];
   
   const starters = matchup.starters || [];
   const starterDetails = starters.map((pid, index) => {
-    // Handle empty slots - assign position based on index
+    // Handle empty slots - assign position based on league's roster_positions
     if (!pid) {
-      // Get position based on index, default to "FLEX" if beyond standard positions
-      const position = index < standardPositions.length ? standardPositions[index] : "FLEX";
+      // Get position based on index from league's roster_positions, default to "FLEX" if beyond positions
+      const position = index < rosterPositions.length ? rosterPositions[index] : "FLEX";
       return {
         pid: `empty-${index}`,
         name: "EMPTY",
@@ -188,7 +191,11 @@ function TeamLineupModal({ team, onClose, matchup, players, byeTeamsThisWeek }) 
     }
     
     const player = players[pid];
-    if (!player) return { pid, name: "EMPTY", position: "Unknown", status: "INCOMPLETE", reason: "Empty Slot" };
+    if (!player) {
+      // For missing players, also use the league's roster positions
+      const position = index < rosterPositions.length ? rosterPositions[index] : "FLEX";
+      return { pid, name: "EMPTY", position: position, status: "INCOMPLETE", reason: "Empty Slot" };
+    }
     
     const fullName = `${player.first_name || ""} ${player.last_name || ""}`.trim();
     const position = player.position || "Unknown";
@@ -333,7 +340,7 @@ function LineupCompletenessChecker() {
   const [leagueId, setLeagueId] = useState(DEFAULT_LEAGUE_ID);
   const [selectedTeam, setSelectedTeam] = useState(null);
   const [selectedMatchup, setSelectedMatchup] = useState(null);
-  const { state, users, rosters, matchups, players, loading, error } = useSleeper(leagueId);
+  const { state, users, rosters, matchups, players, league, loading, error } = useSleeper(leagueId);
 
   const week = state?.display_week || state?.week || state?.leg;
   const seasonType = state?.season_type || "regular";
@@ -496,6 +503,7 @@ function LineupCompletenessChecker() {
             matchup={selectedMatchup} 
             players={players}
             byeTeamsThisWeek={byeTeamsThisWeek}
+            league={league}
             onClose={handleCloseModal} 
           />
         )}
