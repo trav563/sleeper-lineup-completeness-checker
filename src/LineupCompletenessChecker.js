@@ -153,14 +153,19 @@ function useSleeper(leagueId) {
 function TeamLineupModal({ team, onClose, matchup, players, byeTeamsThisWeek }) {
   if (!team || !matchup) return null;
   
+  // Standard Sleeper lineup positions
+  const standardPositions = ["QB", "RB", "RB", "WR", "WR", "TE", "FLEX", "FLEX", "DEF", "K"];
+  
   const starters = matchup.starters || [];
-  const starterDetails = starters.map(pid => {
-    // Handle empty slots
+  const starterDetails = starters.map((pid, index) => {
+    // Handle empty slots - assign position based on index
     if (!pid) {
+      // Get position based on index, default to "FLEX" if beyond standard positions
+      const position = index < standardPositions.length ? standardPositions[index] : "FLEX";
       return {
-        pid: "empty",
+        pid: `empty-${index}`,
         name: "EMPTY",
-        position: "Unknown",
+        position: position,
         status: "INCOMPLETE",
         reason: "Empty Slot",
         isEmpty: true
