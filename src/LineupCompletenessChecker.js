@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 
 /**
  * Sleeper Lineup Completeness Checker — client-only
@@ -58,6 +58,23 @@ const DOT = {
   OK: "bg-emerald-600",
   POTENTIAL: "bg-amber-500",
   INCOMPLETE: "bg-rose-600",
+};
+
+const TEXT = {
+  OK: "text-emerald-600",
+  POTENTIAL: "text-amber-500",
+  INCOMPLETE: "text-rose-600",
+};
+
+// Position display order for lineup
+const POSITION_ORDER = {
+  QB: 1,
+  RB: 2,
+  WR: 3,
+  TE: 4,
+  FLEX: 5,
+  K: 6,
+  DEF: 7,
 };
 
 function avatarUrl(avatarId, size = "thumbs") {
@@ -131,7 +148,115 @@ function useSleeper(leagueId) {
   return { state, users, rosters, matchups, players, loading, error };
 }
 
-function Section({ title, items, tone }) {
+function TeamLineupModal({ team, onClose, matchup, players, byeTeamsThisWeek }) {
+  if (!team || !matchup) return null;
+  
+  const starters = matchup.starters || [];
+  const starterDetails = starters.map(pid => {
+    // Handle D/ST separately
+    if (isDSTStarterId(pid)) {
+      const isDST = true;
+      const onBye = byeTeamsThisWeek.has(pid);
+      return {
+        pid,
+        name: `${pid} D/ST`,
+        position: "DEF",
+        status: onBye ? "INCOMPLETE" : "OK",
+        reason: onBye ? "BYE" : null,
+        isDST
+      };
+    }
+    
+    const player = players[pid];
+    if (!player) return { pid, name: pid, position: "Unknown", status: "OK" };
+    
+    const fullName = `${player.first_name || ""} ${player.last_name || ""}`.trim();
+    const position = player.position || "Unknown";
+    
+    // Check for bye week
+    const onBye = player.team && byeTeamsThisWeek.has(player.team);
+    if (onBye) {
+      return {
+        pid,
+        name: fullName,
+        position,
+        status: "INCOMPLETE",
+        reason: "BYE"
+      };
+    }
+    
+    // Check injury status
+    const status = classifyInjury(player);
+    const reason = player.injury_status || (status === "INCOMPLETE" ? "Out" : null);
+    
+    return {
+      pid,
+      name: fullName,
+      position,
+      status,
+      reason
+    };
+  });
+  
+  // Sort by position order
+  const sortedStarters = [...starterDetails].sort((a, b) => {
+    const orderA = POSITION_ORDER[a.position] || 99;
+    const orderB = POSITION_ORDER[b.position] || 99;
+    return orderA - orderB;
+  });
+  
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-6">
+          <div className="flex justify-between items-center mb-4">
+            <div className="flex items-center gap-3">
+              {team.avatar ? (
+                <img src={team.avatar} alt="avatar" className="h-12 w-12 rounded-full border border-gray-200 shadow-sm"/>
+              ) : (
+                <div className="h-12 w-12 rounded-full bg-gray-200" />
+              )}
+              <h2 className="text-xl font-bold">{team.name}</h2>
+            </div>
+            <button 
+              onClick={onClose}
+              className="text-gray-500 hover:text-gray-700 focus:outline-none"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          
+          <h3 className="font-semibold text-gray-700 mb-3">Starting Lineup</h3>
+          
+          <ul className="space-y-2">
+            {sortedStarters.map((player) => (
+              <li key={player.pid} className="flex items-center p-2 rounded-lg border border-gray-100 hover:bg-gray-50">
+                <div className="w-10 text-xs font-medium text-gray-500">{player.position}</div>
+                <div className="flex-1 font-medium">{player.name}</div>
+                <div className={`text-sm font-medium ${TEXT[player.status]}`}>
+                  {player.reason || (player.status === "OK" ? "Healthy" : "")}
+                </div>
+              </li>
+            ))}
+          </ul>
+          
+          <div className="mt-6 pt-4 border-t border-gray-100">
+            <button
+              onClick={onClose}
+              className="w-full py-2 px-4 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg font-medium"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Section({ title, items, tone, onTeamClick }) {
   return (
     <div className={`rounded-2xl p-6 ${LIGHT[tone]} shadow-sm`}> 
       <div className="flex items-center gap-2 mb-4">
@@ -149,8 +274,13 @@ function Section({ title, items, tone }) {
               ) : (
                 <div className="h-10 w-10 rounded-full bg-gray-200" />
               )}
-              <div className="min-w-0">
-                <div className="font-medium text-gray-900 truncate">{t.name}</div>
+              <div className="min-w-0 flex-1">
+                <div 
+                  className="font-medium text-gray-900 truncate cursor-pointer hover:underline"
+                  onClick={() => onTeamClick(t)}
+                >
+                  {t.name}
+                </div>
                 {t.flagged?.length ? (
                   <ul className="mt-1 text-xs text-gray-700 space-y-1">
                     {t.flagged.map((f, i) => (
@@ -175,6 +305,8 @@ function Section({ title, items, tone }) {
 
 function LineupCompletenessChecker() {
   const [leagueId, setLeagueId] = useState(DEFAULT_LEAGUE_ID);
+  const [selectedTeam, setSelectedTeam] = useState(null);
+  const [selectedMatchup, setSelectedMatchup] = useState(null);
   const { state, users, rosters, matchups, players, loading, error } = useSleeper(leagueId);
 
   const week = state?.display_week || state?.week || state?.leg;
@@ -238,6 +370,7 @@ function LineupCompletenessChecker() {
         avatar: avatarUrl(owner?.avatar || null, "thumbs"),
         status,
         flagged,
+        matchup_id: m.matchup_id,
       });
     }
 
@@ -249,6 +382,25 @@ function LineupCompletenessChecker() {
     for (const t of teams) g[t.status].push(t);
     return g;
   }, [teams]);
+  
+  // Find the matchup for a specific team
+  const getMatchupForTeam = useCallback((team) => {
+    if (!team || !matchups) return null;
+    return matchups.find(m => m.roster_id === team.roster_id);
+  }, [matchups]);
+  
+  // Handle team click
+  const handleTeamClick = useCallback((team) => {
+    const matchup = getMatchupForTeam(team);
+    setSelectedTeam(team);
+    setSelectedMatchup(matchup);
+  }, [getMatchupForTeam]);
+  
+  // Close modal
+  const handleCloseModal = useCallback(() => {
+    setSelectedTeam(null);
+    setSelectedMatchup(null);
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white text-gray-900 p-4 md:p-8">
@@ -284,10 +436,20 @@ function LineupCompletenessChecker() {
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Section title="Complete" items={grouped.OK} tone="OK" />
-          <Section title="Potential to be Incomplete" items={grouped.POTENTIAL} tone="POTENTIAL" />
-          <Section title="Incomplete" items={grouped.INCOMPLETE} tone="INCOMPLETE" />
+          <Section title="Complete" items={grouped.OK} tone="OK" onTeamClick={handleTeamClick} />
+          <Section title="Potential to be Incomplete" items={grouped.POTENTIAL} tone="POTENTIAL" onTeamClick={handleTeamClick} />
+          <Section title="Incomplete" items={grouped.INCOMPLETE} tone="INCOMPLETE" onTeamClick={handleTeamClick} />
         </div>
+        
+        {selectedTeam && selectedMatchup && (
+          <TeamLineupModal 
+            team={selectedTeam} 
+            matchup={selectedMatchup} 
+            players={players}
+            byeTeamsThisWeek={byeTeamsThisWeek}
+            onClose={handleCloseModal} 
+          />
+        )}
 
         <footer className="text-xs text-gray-500 pt-4 border-t border-gray-100">
           <p>
