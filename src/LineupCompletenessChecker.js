@@ -182,10 +182,7 @@ function LineupCompletenessChecker() {
   const seasonType = state?.season_type || "regular";
   const isPreseason = seasonType === "pre";
   
-  // Debug logs
-  console.log("Week:", week);
-  console.log("Season Type:", seasonType);
-  console.log("Is Preseason:", isPreseason);
+  // We'll display these values directly on the page instead of console logs
   const byeTeamsThisWeek = useMemo(() => new Set((BYE_MAP_2025[Number(week)] || [])), [week]);
 
   const userById = useMemo(() => new Map(users.map((u) => [u.user_id, u])), [users]);
@@ -262,6 +259,9 @@ function LineupCompletenessChecker() {
             <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Sleeper Lineup Completeness Checker</h1>
             <p className="text-sm text-gray-600 mt-1">
               {isPreseason ? "Preseason " : ""}Week {week ?? "-"} • League: {leagueId}
+            </p>
+            <p className="text-xs text-gray-500 mt-1">
+              Debug: Season Type: {seasonType} • Is Preseason: {isPreseason ? "Yes" : "No"}
             </p>
           </div>
           <div className="flex items-center gap-2">
