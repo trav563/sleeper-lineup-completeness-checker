@@ -177,7 +177,8 @@ function TeamLineupModal({ team, onClose, matchup, players, byeTeamsThisWeek }) 
         position: "DEF",
         status: onBye ? "INCOMPLETE" : "OK",
         reason: onBye ? "BYE" : "Active",
-        isDST
+        isDST,
+        isDefense: true
       };
     }
     
@@ -254,7 +255,9 @@ function TeamLineupModal({ team, onClose, matchup, players, byeTeamsThisWeek }) 
                 <div className="w-10 text-xs font-medium text-gray-500">{player.position}</div>
                 <div className="flex-1 font-medium">{player.name}</div>
                 <div className={`text-sm font-medium ${player.reason === "PUP" || player.reason === "Empty Slot" ? TEXT.INCOMPLETE : TEXT[player.status]}`}>
-                  {player.reason || (player.status === "OK" ? (player.position === "DEF" ? "Active" : "Healthy") : "")}
+                  {player.reason === "Active" ? "Active" : 
+                   player.reason || 
+                   (player.status === "OK" ? (player.position === "DEF" ? "Active" : "Healthy") : "")}
                 </div>
               </li>
             ))}
