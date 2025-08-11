@@ -254,7 +254,7 @@ function TeamLineupModal({ team, onClose, matchup, players, byeTeamsThisWeek }) 
                 <div className="w-10 text-xs font-medium text-gray-500">{player.position}</div>
                 <div className="flex-1 font-medium">{player.name}</div>
                 <div className={`text-sm font-medium ${player.reason === "PUP" || player.reason === "Empty Slot" ? TEXT.INCOMPLETE : TEXT[player.status]}`}>
-                  {player.reason || (player.status === "OK" ? (player.isDST ? "Active" : "Healthy") : "")}
+                  {player.reason || (player.status === "OK" ? (player.position === "DEF" ? "Active" : "Healthy") : "")}
                 </div>
               </li>
             ))}
