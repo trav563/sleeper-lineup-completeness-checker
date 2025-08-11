@@ -155,6 +155,18 @@ function TeamLineupModal({ team, onClose, matchup, players, byeTeamsThisWeek }) 
   
   const starters = matchup.starters || [];
   const starterDetails = starters.map(pid => {
+    // Handle empty slots
+    if (!pid) {
+      return {
+        pid: "empty",
+        name: "EMPTY",
+        position: "Unknown",
+        status: "INCOMPLETE",
+        reason: "Empty Slot",
+        isEmpty: true
+      };
+    }
+    
     // Handle D/ST separately
     if (isDSTStarterId(pid)) {
       const isDST = true;
@@ -164,13 +176,13 @@ function TeamLineupModal({ team, onClose, matchup, players, byeTeamsThisWeek }) 
         name: `${pid} D/ST`,
         position: "DEF",
         status: onBye ? "INCOMPLETE" : "OK",
-        reason: onBye ? "BYE" : null,
+        reason: onBye ? "BYE" : "Active",
         isDST
       };
     }
     
     const player = players[pid];
-    if (!player) return { pid, name: pid, position: "Unknown", status: "OK" };
+    if (!player) return { pid, name: "EMPTY", position: "Unknown", status: "INCOMPLETE", reason: "Empty Slot" };
     
     const fullName = `${player.first_name || ""} ${player.last_name || ""}`.trim();
     const position = player.position || "Unknown";
@@ -241,8 +253,8 @@ function TeamLineupModal({ team, onClose, matchup, players, byeTeamsThisWeek }) 
               <li key={player.pid} className="flex items-center p-2 rounded-lg border border-gray-100 hover:bg-gray-50">
                 <div className="w-10 text-xs font-medium text-gray-500">{player.position}</div>
                 <div className="flex-1 font-medium">{player.name}</div>
-                <div className={`text-sm font-medium ${player.reason === "PUP" ? TEXT.INCOMPLETE : TEXT[player.status]}`}>
-                  {player.reason || (player.status === "OK" ? "Healthy" : "")}
+                <div className={`text-sm font-medium ${player.reason === "PUP" || player.reason === "Empty Slot" ? TEXT.INCOMPLETE : TEXT[player.status]}`}>
+                  {player.reason || (player.status === "OK" ? (player.isDST ? "Active" : "Healthy") : "")}
                 </div>
               </li>
             ))}
@@ -332,51 +344,64 @@ function LineupCompletenessChecker() {
     for (const m of matchups) {
       const roster = rosterById.get(m.roster_id);
       const owner = userById.get(roster?.owner_id);
-      const starters = (m.starters || []).filter(Boolean);
-
-      let status = "OK";
+      const starters = (m.starters || []);
+      
+      // Check for empty slots in the lineup
+      const hasEmptySlots = starters.some(pid => !pid);
+      
+      let status = hasEmptySlots ? "INCOMPLETE" : "OK";
       const flagged = [];
-
-      for (const pid of starters) {
-        // Handle D/ST (team codes) separately for BYE detection
-        if (isDSTStarterId(pid)) {
-          if (byeTeamsThisWeek.has(pid)) {
-            status = "INCOMPLETE";
-            flagged.push({ pid, name: `${pid} D/ST`, reason: "BYE" });
-            break; // one OUT is enough
+      
+      // Add empty slots to flagged list
+      if (hasEmptySlots) {
+        flagged.push({ pid: "empty", name: "Empty Slot", reason: "Empty Slot" });
+      }
+      
+      // Only continue checking other players if we don't already have empty slots
+      if (!hasEmptySlots) {
+        const nonEmptyStarters = starters.filter(Boolean);
+        
+        for (const pid of nonEmptyStarters) {
+          // Handle D/ST (team codes) separately for BYE detection
+          if (isDSTStarterId(pid)) {
+            if (byeTeamsThisWeek.has(pid)) {
+              status = "INCOMPLETE";
+              flagged.push({ pid, name: `${pid} D/ST`, reason: "BYE" });
+              break; // one OUT is enough
+            }
+            continue;
           }
-          continue;
-        }
 
-        const p = players[pid];
-        if (!p) continue;
+          const p = players[pid];
+          if (!p) continue;
 
-        // Treat BYE as OUT when player's NFL team is on bye this week
-        const team = p.team; // e.g., "KC"
-        if (team && byeTeamsThisWeek.has(team)) {
-          status = "INCOMPLETE";
-          flagged.push({ pid, name: `${p.first_name || ""} ${p.last_name || ""}`.trim(), reason: "BYE" });
-          break;
-        }
+          // Treat BYE as OUT when player's NFL team is on bye this week
+          const team = p.team; // e.g., "KC"
+          if (team && byeTeamsThisWeek.has(team)) {
+            status = "INCOMPLETE";
+            flagged.push({ pid, name: `${p.first_name || ""} ${p.last_name || ""}`.trim(), reason: "BYE" });
+            break;
+          }
 
-        // Explicitly check for PUP status
-        const isPUP = (p.injury_status || "").toLowerCase() === "pup" || 
-                      (p.status || "").toLowerCase() === "pup";
-        
-        if (isPUP) {
-          status = "INCOMPLETE";
-          flagged.push({ pid, name: `${p.first_name || ""} ${p.last_name || ""}`.trim(), reason: "PUP" });
-          break;
-        }
-        
-        const bucket = classifyInjury(p);
-        if (bucket === "INCOMPLETE") {
-          status = "INCOMPLETE";
-          flagged.push({ pid, name: `${p.first_name || ""} ${p.last_name || ""}`.trim(), reason: (p.injury_status || p.status || "Out").toString() });
-          break;
-        } else if (bucket === "POTENTIAL" && status !== "INCOMPLETE") {
-          status = "POTENTIAL";
-          flagged.push({ pid, name: `${p.first_name || ""} ${p.last_name || ""}`.trim(), reason: p.injury_status || "Questionable" });
+          // Explicitly check for PUP status
+          const isPUP = (p.injury_status || "").toLowerCase() === "pup" || 
+                        (p.status || "").toLowerCase() === "pup";
+          
+          if (isPUP) {
+            status = "INCOMPLETE";
+            flagged.push({ pid, name: `${p.first_name || ""} ${p.last_name || ""}`.trim(), reason: "PUP" });
+            break;
+          }
+          
+          const bucket = classifyInjury(p);
+          if (bucket === "INCOMPLETE") {
+            status = "INCOMPLETE";
+            flagged.push({ pid, name: `${p.first_name || ""} ${p.last_name || ""}`.trim(), reason: (p.injury_status || p.status || "Out").toString() });
+            break;
+          } else if (bucket === "POTENTIAL" && status !== "INCOMPLETE") {
+            status = "POTENTIAL";
+            flagged.push({ pid, name: `${p.first_name || ""} ${p.last_name || ""}`.trim(), reason: p.injury_status || "Questionable" });
+          }
         }
       }
 
