@@ -162,7 +162,8 @@ function TeamLineupModal({ team, onClose, matchup, players, byeTeamsThisWeek, le
   const starters = matchup.starters || [];
   const starterDetails = starters.map((pid, index) => {
     // Handle empty slots - assign position based on league's roster_positions
-    if (!pid) {
+    // Be more thorough about what constitutes "empty" - Sleeper uses "0" for empty slots
+    if (!pid || pid === "" || pid === null || pid === undefined || pid === "0") {
       // Get position based on index from league's roster_positions, default to "FLEX" if beyond positions
       const position = index < rosterPositions.length ? rosterPositions[index] : "FLEX";
       return {
@@ -194,11 +195,11 @@ function TeamLineupModal({ team, onClose, matchup, players, byeTeamsThisWeek, le
     if (!player) {
       // For missing players, also use the league's roster positions
       const position = index < rosterPositions.length ? rosterPositions[index] : "FLEX";
-      return { pid, name: "EMPTY", position: position, status: "INCOMPLETE", reason: "Empty Slot" };
+      return { pid, name: "EMPTY", position: position, status: "INCOMPLETE", reason: "Empty Slot", isEmpty: true };
     }
     
     const fullName = `${player.first_name || ""} ${player.last_name || ""}`.trim();
-    const position = player.position || "Unknown";
+    const position = player.position || (index < rosterPositions.length ? rosterPositions[index] : "FLEX");
     
     // Check for bye week
     const onBye = player.team && byeTeamsThisWeek.has(player.team);
@@ -361,8 +362,9 @@ function LineupCompletenessChecker() {
       const owner = userById.get(roster?.owner_id);
       const starters = (m.starters || []);
       
-      // Check for empty slots in the lineup
-      const hasEmptySlots = starters.some(pid => !pid);
+      // Check for empty slots in the lineup - be more thorough about what constitutes "empty"
+      // Sleeper uses "0" as a string to represent empty slots
+      const hasEmptySlots = starters.some(pid => !pid || pid === "" || pid === null || pid === undefined || pid === "0");
       
       let status = hasEmptySlots ? "INCOMPLETE" : "OK";
       const flagged = [];
