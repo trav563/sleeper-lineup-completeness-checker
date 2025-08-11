@@ -1,13 +1,13 @@
 {
   "files": {
     "main.css": "/sleeper-lineup-completeness-checker/static/css/main.c17578c6.css",
-    "main.js": "/sleeper-lineup-completeness-checker/static/js/main.513e45f8.js",
+    "main.js": "/sleeper-lineup-completeness-checker/static/js/main.fc9979fb.js",
     "index.html": "/sleeper-lineup-completeness-checker/index.html",
     "main.c17578c6.css.map": "/sleeper-lineup-completeness-checker/static/css/main.c17578c6.css.map",
-    "main.513e45f8.js.map": "/sleeper-lineup-completeness-checker/static/js/main.513e45f8.js.map"
+    "main.fc9979fb.js.map": "/sleeper-lineup-completeness-checker/static/js/main.fc9979fb.js.map"
   },
   "entrypoints": [
     "static/css/main.c17578c6.css",
-    "static/js/main.513e45f8.js"
+    "static/js/main.fc9979fb.js"
   ]
 }
