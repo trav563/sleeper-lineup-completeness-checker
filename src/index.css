@@ -1,0 +1,160 @@
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #f5f5f5;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.input-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.input-field {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  margin-right: 10px;
+  width: 300px;
+}
+
+.button {
+  padding: 10px 20px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.button:hover {
+  background-color: #45a049;
+}
+
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.team-card {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 15px;
+}
+
+.team-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.team-logo {
+  width: 40px;
+  height: 40px;
+  margin-right: 10px;
+}
+
+.team-name {
+  font-weight: bold;
+  font-size: 18px;
+}
+
+.status {
+  margin-top: 10px;
+  padding: 5px 10px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.status-ok {
+  background-color: #dff0d8;
+  color: #3c763d;
+}
+
+.status-potential {
+  background-color: #fcf8e3;
+  color: #8a6d3b;
+}
+
+.status-incomplete {
+  background-color: #f2dede;
+  color: #a94442;
+}
+
+.player-list {
+  margin-top: 15px;
+}
+
+.player-item {
+  padding: 8px;
+  border-bottom: 1px solid #eee;
+}
+
+.player-item:last-child {
+  border-bottom: none;
+}
+
+.player-name {
+  font-weight: bold;
+}
+
+.player-position {
+  color: #666;
+  margin-left: 5px;
+}
+
+.player-status {
+  margin-left: 10px;
+  font-size: 14px;
+}
+
+.bye-week {
+  color: #a94442;
+}
+
+.injured {
+  color: #8a6d3b;
+}
+
+.week-selector {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.week-button {
+  padding: 5px 10px;
+  margin: 0 5px;
+  background-color: #f1f1f1;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.week-button.active {
+  background-color: #4CAF50;
+  color: white;
+  border-color: #4CAF50;
+}
