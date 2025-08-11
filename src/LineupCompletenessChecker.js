@@ -101,7 +101,6 @@ function useSleeper(leagueId) {
       setError(null);
       try {
         const nfl = await fetch(`${API}/state/nfl`).then((r) => r.json());
-        console.log("NFL State from Sleeper API:", nfl); // Debug log
         if (aborted) return;
         setState(nfl);
         const week = nfl.display_week || nfl.week || nfl.leg;
@@ -182,7 +181,7 @@ function LineupCompletenessChecker() {
   const seasonType = state?.season_type || "regular";
   const isPreseason = seasonType === "pre";
   
-  // We'll display these values directly on the page instead of console logs
+  // Season type detection for preseason vs regular season
   const byeTeamsThisWeek = useMemo(() => new Set((BYE_MAP_2025[Number(week)] || [])), [week]);
 
   const userById = useMemo(() => new Map(users.map((u) => [u.user_id, u])), [users]);
@@ -259,9 +258,6 @@ function LineupCompletenessChecker() {
             <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Sleeper Lineup Completeness Checker</h1>
             <p className="text-sm text-gray-600 mt-1">
               {isPreseason ? "Preseason " : ""}Week {week ?? "-"} • League: {leagueId}
-            </p>
-            <p className="text-xs text-gray-500 mt-1">
-              Debug: Season Type: {seasonType} • Is Preseason: {isPreseason ? "Yes" : "No"}
             </p>
           </div>
           <div className="flex items-center gap-2">
