@@ -25,22 +25,20 @@ const API = "https://api.sleeper.app/v1";
 
 // --- 2025 NFL Bye Weeks map (teams by Sleeper/standard abbreviations) ---
 // Keep this mapping updated per season. Weeks are NFL regular-season weeks.
-// Source: FantasyAlarm "2025 NFL Bye Weeks" (May 14, 2025).
+// Source: User provided 2025 NFL Bye Week schedule
 // If a team appears under the current week, its players/DST are treated as OUT.
 // Abbreviations should match Sleeper player.team (e.g., "KC", "PHI").
 const BYE_MAP_2025 = {
-  // Example structure; update with actual 2025 data as needed.
-  // Week: ["TEAM1", "TEAM2", ...]
-  5: ["DET", "SEA"],
-  6: ["GB", "IND", "LV", "MIA"],
-  7: ["BUF", "CIN", "DAL"],
-  8: ["BAL", "CAR", "JAX", "TB"],
-  9: ["CHI", "CLE", "DEN", "LAR", "NE", "NYJ"],
-  10: ["ARI", "MIN", "NO", "NYG"],
-  11: ["ATL", "HOU", "KC", "PHI", "PIT", "TEN"],
-  12: ["LAC", "SF", "WAS"],
-  13: ["DAL", "BAL", "CIN"],
-  14: ["BUF", "CAR", "JAX", "TB"],
+  5: ["PIT", "CHI", "GB", "ATL"],
+  6: ["HOU", "MIN"],
+  7: ["BAL", "BUF"],
+  8: ["JAX", "LV", "DET", "ARI", "SEA", "LAR"],
+  9: ["PHI", "CLE", "NYJ", "TB"],
+  10: ["KC", "CIN", "TEN", "DAL"],
+  11: ["IND", "NO"],
+  12: ["MIA", "DEN", "LAC", "WAS"],
+  13: [], // No teams on bye in Week 13
+  14: ["NYG", "NE", "CAR", "SF"],
 };
 
 // Color tokens
@@ -180,6 +178,8 @@ function LineupCompletenessChecker() {
   const { state, users, rosters, matchups, players, loading, error } = useSleeper(leagueId);
 
   const week = state?.display_week || state?.week || state?.leg;
+  const seasonType = state?.season_type || "regular";
+  const isPreseason = seasonType === "pre";
   const byeTeamsThisWeek = useMemo(() => new Set((BYE_MAP_2025[Number(week)] || [])), [week]);
 
   const userById = useMemo(() => new Map(users.map((u) => [u.user_id, u])), [users]);
@@ -254,7 +254,9 @@ function LineupCompletenessChecker() {
         <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Sleeper Lineup Completeness Checker</h1>
-            <p className="text-sm text-gray-600 mt-1">Week {week ?? "-"} • League: {leagueId}</p>
+            <p className="text-sm text-gray-600 mt-1">
+              {isPreseason ? "Preseason " : ""}Week {week ?? "-"} • League: {leagueId}
+            </p>
           </div>
           <div className="flex items-center gap-2">
             <input
