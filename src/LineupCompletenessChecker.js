@@ -95,8 +95,8 @@ function isDSTStarterId(pid) {
 function classifyInjury(player) {
   const inj = String(player?.injury_status || "").toLowerCase();
   const status = String(player?.status || "").toLowerCase();
-  // Treat IR/Suspended as OUT as requested
-  if (["out", "ir", "suspended"].includes(inj) || ["ir", "suspension"].includes(status))
+  // Treat IR/Suspended/PUP as OUT as requested
+  if (["out", "ir", "suspended", "pup"].includes(inj) || ["ir", "suspension", "pup"].includes(status))
     return "INCOMPLETE";
   if (["questionable", "doubtful"].includes(inj)) return "POTENTIAL";
   return "OK";
@@ -117,15 +117,17 @@ function useSleeper(leagueId) {
       setLoading(true);
       setError(null);
       try {
-        const nfl = await fetch(`${API}/state/nfl`).then((r) => r.json());
+        // Add timestamp to prevent caching
+        const timestamp = Date.now();
+        const nfl = await fetch(`${API}/state/nfl?_=${timestamp}`).then((r) => r.json());
         if (aborted) return;
         setState(nfl);
         const week = nfl.display_week || nfl.week || nfl.leg;
         const [u, r, m, p] = await Promise.all([
-          fetch(`${API}/league/${leagueId}/users`).then((r) => r.json()),
-          fetch(`${API}/league/${leagueId}/rosters`).then((r) => r.json()),
-          fetch(`${API}/league/${leagueId}/matchups/${week}`).then((r) => r.json()),
-          fetch(`${API}/players/nfl`).then((r) => r.json()), // large — cacheable
+          fetch(`${API}/league/${leagueId}/users?_=${timestamp}`).then((r) => r.json()),
+          fetch(`${API}/league/${leagueId}/rosters?_=${timestamp}`).then((r) => r.json()),
+          fetch(`${API}/league/${leagueId}/matchups/${week}?_=${timestamp}`).then((r) => r.json()),
+          fetch(`${API}/players/nfl?_=${timestamp}`).then((r) => r.json()), // large — cacheable
         ]);
         if (aborted) return;
         setUsers(u);
@@ -236,7 +238,7 @@ function TeamLineupModal({ team, onClose, matchup, players, byeTeamsThisWeek }) 
                 <div className="w-10 text-xs font-medium text-gray-500">{player.position}</div>
                 <div className="flex-1 font-medium">{player.name}</div>
                 <div className={`text-sm font-medium ${TEXT[player.status]}`}>
-                  {player.reason || (player.status === "OK" ? "Healthy" : "")}
+                  {player.reason === "pup" ? "PUP" : player.reason || (player.status === "OK" ? "Healthy" : "")}
                 </div>
               </li>
             ))}
