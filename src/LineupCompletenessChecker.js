@@ -101,6 +101,7 @@ function useSleeper(leagueId) {
       setError(null);
       try {
         const nfl = await fetch(`${API}/state/nfl`).then((r) => r.json());
+        console.log("NFL State from Sleeper API:", nfl); // Debug log
         if (aborted) return;
         setState(nfl);
         const week = nfl.display_week || nfl.week || nfl.leg;
@@ -180,6 +181,11 @@ function LineupCompletenessChecker() {
   const week = state?.display_week || state?.week || state?.leg;
   const seasonType = state?.season_type || "regular";
   const isPreseason = seasonType === "pre";
+  
+  // Debug logs
+  console.log("Week:", week);
+  console.log("Season Type:", seasonType);
+  console.log("Is Preseason:", isPreseason);
   const byeTeamsThisWeek = useMemo(() => new Set((BYE_MAP_2025[Number(week)] || [])), [week]);
 
   const userById = useMemo(() => new Map(users.map((u) => [u.user_id, u])), [users]);
