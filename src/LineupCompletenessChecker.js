@@ -189,14 +189,18 @@ function TeamLineupModal({ team, onClose, matchup, players, byeTeamsThisWeek }) 
     
     // Check injury status
     const status = classifyInjury(player);
-    const reason = player.injury_status || (status === "INCOMPLETE" ? "Out" : null);
+    const reason = player.injury_status || player.status || (status === "INCOMPLETE" ? "Out" : null);
+    
+    // Explicitly check for PUP status
+    const isPUP = (player.injury_status || "").toLowerCase() === "pup" || 
+                  (player.status || "").toLowerCase() === "pup";
     
     return {
       pid,
       name: fullName,
       position,
-      status,
-      reason
+      status: isPUP ? "INCOMPLETE" : status,
+      reason: isPUP ? "PUP" : reason
     };
   });
   
@@ -237,8 +241,8 @@ function TeamLineupModal({ team, onClose, matchup, players, byeTeamsThisWeek }) 
               <li key={player.pid} className="flex items-center p-2 rounded-lg border border-gray-100 hover:bg-gray-50">
                 <div className="w-10 text-xs font-medium text-gray-500">{player.position}</div>
                 <div className="flex-1 font-medium">{player.name}</div>
-                <div className={`text-sm font-medium ${TEXT[player.status]}`}>
-                  {player.reason === "pup" ? "PUP" : player.reason || (player.status === "OK" ? "Healthy" : "")}
+                <div className={`text-sm font-medium ${player.reason === "PUP" ? TEXT.INCOMPLETE : TEXT[player.status]}`}>
+                  {player.reason || (player.status === "OK" ? "Healthy" : "")}
                 </div>
               </li>
             ))}
@@ -355,6 +359,16 @@ function LineupCompletenessChecker() {
           break;
         }
 
+        // Explicitly check for PUP status
+        const isPUP = (p.injury_status || "").toLowerCase() === "pup" || 
+                      (p.status || "").toLowerCase() === "pup";
+        
+        if (isPUP) {
+          status = "INCOMPLETE";
+          flagged.push({ pid, name: `${p.first_name || ""} ${p.last_name || ""}`.trim(), reason: "PUP" });
+          break;
+        }
+        
         const bucket = classifyInjury(p);
         if (bucket === "INCOMPLETE") {
           status = "INCOMPLETE";
